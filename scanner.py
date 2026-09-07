@@ -43,6 +43,6 @@ if __name__ == "__main__":
     
     if found_devices:
         update_database(found_devices)
-        print("Sincronización completa.")
+        print("Sincronización completada.")
     else:
-        print("No se encontraron dispositivos. Verifica tu rango de IP o permisos de red.")
+        print("No se encontraron dispositivos de Red. Verifica tu rango de IP o permisos de red.")
