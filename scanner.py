@@ -24,17 +24,16 @@ def obtener_subred_local():
 def scan_network(ip_range):
     print(f"Escaneando la red: {ip_range}...")
     
-    # Asegura que Scapy use la interfaz predeterminada del sistema
-    interfaz = conf.iface
-    print(f"Interfaz utilizada por Scapy: {interfaz.name if hasattr(interfaz, 'name') else interfaz}")
+    # Selecciona la tarjeta Ethernet por cable (índice 12 en tu lista de Npcap)
+    # Si quieres usar Wi-Fi, puedes cambiar el 12 por 16
+    interfaz = conf.ifaces.dev_from_index(12)
+    print(f"Interfaz forzada en Scapy: {interfaz.name}")
 
-    # Crear paquete ARP broadcast
     arp = ARP(pdst=ip_range)
     ether = Ether(dst="ff:ff:ff:ff:ff:ff")
     packet = ether / arp
 
-    # timeout=4 y retry=1 para dar tiempo a que los nodos de la malla respondan
-    ans, _ = srp(packet, timeout=4, retry=1, verbose=0, iface=interfaz)
+    ans, _ = srp(packet, timeout=3, retry=1, verbose=0, iface=interfaz)
     
     devices = []
     for sent, received in ans:
