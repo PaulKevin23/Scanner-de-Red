@@ -1,7 +1,9 @@
 import os
+import socket
 from dotenv import load_dotenv
-from scapy.all import ARP, Ether, srp
+from scapy.all import ARP, Ether, srp, conf
 from supabase import create_client, Client
+
 
 # 1. Cargar credenciales desde el archivo .env
 load_dotenv()
@@ -9,18 +11,33 @@ url = os.environ.get("SUPABASE_URL")
 key = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 
+def obtener_subred_local():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80)) 
+        ip_local = s.getsockname()[0]
+    finally:
+        s.close()
+    partes = ip_local.split('.')
+    return f"{partes[0]}.{partes[1]}.{partes[2]}.0/24"
+
 def scan_network(ip_range):
     print(f"Escaneando la red: {ip_range}...")
-    # Crear paquete ARP para buscar dispositivos en la red
+    
+    # Asegura que Scapy use la interfaz predeterminada del sistema
+    interfaz = conf.iface
+    print(f"Interfaz utilizada por Scapy: {interfaz.name if hasattr(interfaz, 'name') else interfaz}")
+
+    # Crear paquete ARP broadcast
     arp = ARP(pdst=ip_range)
     ether = Ether(dst="ff:ff:ff:ff:ff:ff")
     packet = ether / arp
 
-    # Enviar el paquete y recibir respuestas (timeout de 3 segundos)
-    result = srp(packet, timeout=3, verbose=0)[0]
+    # timeout=4 y retry=1 para dar tiempo a que los nodos de la malla respondan
+    ans, _ = srp(packet, timeout=4, retry=1, verbose=0, iface=interfaz)
     
     devices = []
-    for sent, received in result:
+    for sent, received in ans:
         devices.append({
             'ip_address': received.psrc,
             'mac_address': received.hwsrc,
@@ -37,8 +54,9 @@ def update_database(devices):
 
 if __name__ == "__main__":
     # IMPORTANTE: Ajusta este rango según tu red local (ej. 192.168.0.1/24 o 192.168.1.1/24)
-    target_ip = "192.168.1.1/24" 
-    
+    target_ip = obtener_subred_local()
+    print(f"Red principal detectada automáticamente: {target_ip}")
+
     found_devices = scan_network(target_ip)
     
     if found_devices:
