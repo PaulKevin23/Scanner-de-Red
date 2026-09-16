@@ -59,3 +59,4 @@ if __name__ == "__main__":
         print("Sincronización completada.")
     else:
         print("No se encontraron dispositivos. Verifica la conexión o permisos.")
+        
